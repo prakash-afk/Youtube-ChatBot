@@ -8,14 +8,14 @@ from youtube_transcript_api._errors import VideoUnavailable
 
 from app.chunking import build_documents, transcript_preview
 from app.config import get_settings
-from app.embed_store import build_vector_store, save_vector_store
+from app.embed_store import build_retriever, build_vector_store, save_vector_store
 from app.generator import answer_question, load_text_generator
 from app.transcript import extract_video_id, fetch_transcript
 
 
 @st.cache_resource(show_spinner=False)
-def get_generator(model_id: str, hf_token: str):
-    return load_text_generator(model_id, hf_token)
+def get_generator(model_path: str):
+    return load_text_generator(model_path)
 
 
 def render_sources(docs: list) -> None:
@@ -36,14 +36,17 @@ def main() -> None:
 
     st.set_page_config(page_title="YouTube Chatbot", page_icon=">", layout="wide")
     st.title("YouTube Transcript Chatbot")
-    st.caption("Local embeddings + FAISS retrieval + Hugging Face API answers")
+    st.caption("Fully local retrieval and answer generation")
 
     with st.sidebar:
         st.subheader("Configuration")
-        st.write(f"Chat model: `{settings.chat_model_id}`")
+        st.write(f"Chat model path: `{settings.chat_model_path}`")
         st.write(f"Embedding model path: `{settings.embedding_model_path}`")
         st.write(f"FAISS index path: `{settings.faiss_index_dir}`")
-        st.write("Embeddings stay local. Only the final retrieved context is sent to Hugging Face.")
+        st.write(f"CUDA available: `{settings.use_cuda}`")
+        st.write("Transcript retrieval and answer generation both stay on this machine.")
+        if not settings.use_cuda:
+            st.warning("PyTorch is running in CPU-only mode, so answer generation can be slow.")
 
     video_input = st.text_input("YouTube URL or video ID")
     question = st.text_area("Ask a question about the video")
@@ -73,7 +76,9 @@ def main() -> None:
                             index_dir=settings.faiss_index_dir,
                             video_id=video_id,
                         )
+                        retriever = build_retriever(vector_store, settings.top_k)
                         st.session_state["vector_store"] = vector_store
+                        st.session_state["retriever"] = retriever
                         st.session_state["video_id"] = video_id
                         st.session_state["transcript_preview"] = transcript_preview(transcript)
                     st.success("Transcript indexed successfully.")
@@ -89,25 +94,25 @@ def main() -> None:
             st.write(st.session_state["transcript_preview"])
 
     if st.button("Ask"):
-        if not settings.hf_token:
-            st.error("Add HF_TOKEN to your .env file before asking questions.")
-        elif "vector_store" not in st.session_state:
+        if "retriever" not in st.session_state:
             st.error("Build the transcript index first.")
         elif not question.strip():
             st.error("Enter a question first.")
+        elif not Path(settings.chat_model_path).exists():
+            st.error("Local chat model path not found. Download the chat model first.")
         elif not Path(settings.embedding_model_path).exists():
             st.error("Local embedding model path not found. Download the embedding model first.")
         else:
             try:
                 with st.spinner("Generating answer from the retrieved transcript context..."):
-                    generator = get_generator(settings.chat_model_id, settings.hf_token)
+                    generator = get_generator(settings.chat_model_path)
                     answer, docs = answer_question(
                         generator,
-                        st.session_state["vector_store"],
+                        st.session_state["retriever"],
                         question,
-                        top_k=settings.top_k,
-                        max_new_tokens=settings.max_new_tokens,
-                        temperature=settings.temperature,
+                        settings.max_context_chars,
+                        settings.max_new_tokens,
+                        settings.temperature,
                     )
                 st.subheader("Answer")
                 st.write(answer)

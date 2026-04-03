@@ -11,6 +11,13 @@ def build_vector_store(documents, embedding_model_path: str) -> FAISS:
     return FAISS.from_documents(documents, embedding=embeddings)
 
 
+def build_retriever(vector_store: FAISS, top_k: int):
+    return vector_store.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": top_k},
+    )
+
+
 def save_vector_store(vector_store: FAISS, index_dir: str, video_id: str) -> str:
     target_dir = Path(index_dir) / video_id
     target_dir.mkdir(parents=True, exist_ok=True)
