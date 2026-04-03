@@ -79,7 +79,7 @@ def main() -> None:
                 except TranscriptsDisabled:
                     st.error("Transcripts are disabled for this video.")
                 except VideoUnavailable:
-                    st.error("This video is unavailable or its transcript cannot be retrieved.")
+                    st.error("This video is unavailable or its transcript cannot be retrieved. Try opening the video in YouTube to confirm the ID.")
                 except Exception as exc:
                     st.error(f"Could not build the transcript index: {exc}")
 
