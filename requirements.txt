@@ -1,0 +1,6 @@
+transformers
+torch
+sentence-transformers
+faiss-cpu
+youtube-transcript-api
+streamlit
