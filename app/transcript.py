@@ -6,6 +6,16 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import NoTranscriptFound
+
+
+DEFAULT_LANGUAGE_PRIORITY = [
+    "en",
+    "en-US",
+    "en-GB",
+    "hi",
+    "hi-IN",
+]
 
 
 def extract_video_id(url_or_id: str) -> str:
@@ -28,12 +38,23 @@ def extract_video_id(url_or_id: str) -> str:
 
 
 def fetch_transcript(video_id: str, languages: List[str] | None = None) -> List[dict]:
-    preferred_languages = languages or ["en"]
+    preferred_languages = languages or DEFAULT_LANGUAGE_PRIORITY
     session = requests.Session()
     session.trust_env = False
-    transcript = YouTubeTranscriptApi(http_client=session).fetch(
-        video_id, languages=preferred_languages
-    )
+    api = YouTubeTranscriptApi(http_client=session)
+
+    try:
+        transcript = api.fetch(video_id, languages=preferred_languages)
+    except NoTranscriptFound:
+        transcript_list = api.list(video_id)
+        try:
+            transcript = transcript_list.find_generated_transcript(preferred_languages).fetch()
+        except NoTranscriptFound:
+            available_transcripts = list(transcript_list)
+            if not available_transcripts:
+                raise
+            transcript = available_transcripts[0].fetch()
+
     normalized_transcript: List[dict] = []
     for item in transcript:
         normalized_transcript.append(
