@@ -12,10 +12,28 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _clear_broken_local_proxies() -> None:
+    for key in [
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+    ]:
+        value = os.environ.get(key, "")
+        if "127.0.0.1:9" in value:
+            os.environ.pop(key, None)
+
+
+_clear_broken_local_proxies()
+
+
 @dataclass(frozen=True)
 class Settings:
-    chat_model_path: str = os.getenv(
-        "HF_CHAT_MODEL_PATH", str(BASE_DIR / ".hf_models" / "Qwen2.5-1.5B-Instruct")
+    hf_token: str = os.getenv("HF_TOKEN", "")
+    chat_model_id: str = os.getenv(
+        "HF_CHAT_MODEL", "mistralai/Mistral-7B-Instruct-v0.3"
     )
     embedding_model_path: str = os.getenv(
         "EMBEDDING_MODEL_PATH", str(BASE_DIR / ".hf_models" / "all-MiniLM-L6-v2")

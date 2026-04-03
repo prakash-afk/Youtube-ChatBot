@@ -4,6 +4,7 @@ import re
 from typing import List
 from urllib.parse import parse_qs, urlparse
 
+import requests
 from youtube_transcript_api import YouTubeTranscriptApi
 
 
@@ -28,4 +29,9 @@ def extract_video_id(url_or_id: str) -> str:
 
 def fetch_transcript(video_id: str, languages: List[str] | None = None) -> List[dict]:
     preferred_languages = languages or ["en"]
-    return YouTubeTranscriptApi.get_transcript(video_id, languages=preferred_languages)
+    session = requests.Session()
+    session.trust_env = False
+    transcript = YouTubeTranscriptApi(http_client=session).fetch(
+        video_id, languages=preferred_languages
+    )
+    return [dict(item) for item in transcript]

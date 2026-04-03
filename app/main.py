@@ -13,8 +13,8 @@ from app.transcript import extract_video_id, fetch_transcript
 
 
 @st.cache_resource(show_spinner=False)
-def get_generator(model_path: str):
-    return load_text_generator(model_path)
+def get_generator(model_id: str, hf_token: str):
+    return load_text_generator(model_id, hf_token)
 
 
 def render_sources(docs: list) -> None:
@@ -35,11 +35,11 @@ def main() -> None:
 
     st.set_page_config(page_title="YouTube Chatbot", page_icon=">", layout="wide")
     st.title("YouTube Transcript Chatbot")
-    st.caption("Local Hugging Face model + local embeddings + FAISS retrieval")
+    st.caption("Local embeddings + FAISS retrieval + Hugging Face API answers")
 
     with st.sidebar:
         st.subheader("Configuration")
-        st.write(f"Chat model path: `{settings.chat_model_path}`")
+        st.write(f"Chat model: `{settings.chat_model_id}`")
         st.write(f"Embedding model path: `{settings.embedding_model_path}`")
         st.write(f"FAISS index path: `{settings.faiss_index_dir}`")
 
@@ -85,18 +85,18 @@ def main() -> None:
             st.write(st.session_state["transcript_preview"])
 
     if st.button("Ask"):
-        if "vector_store" not in st.session_state:
+        if not settings.hf_token:
+            st.error("Add HF_TOKEN to your .env file before asking questions.")
+        elif "vector_store" not in st.session_state:
             st.error("Build the transcript index first.")
         elif not question.strip():
             st.error("Enter a question first.")
-        elif not Path(settings.chat_model_path).exists():
-            st.error("Local chat model path not found. Download the chat model first.")
         elif not Path(settings.embedding_model_path).exists():
             st.error("Local embedding model path not found. Download the embedding model first.")
         else:
             try:
                 with st.spinner("Generating answer from the retrieved transcript context..."):
-                    generator = get_generator(settings.chat_model_path)
+                    generator = get_generator(settings.chat_model_id, settings.hf_token)
                     answer, docs = answer_question(
                         generator,
                         st.session_state["vector_store"],
