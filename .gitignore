@@ -1,0 +1,6 @@
+ytChatBot/
+venv/
+__pycache__/
+*.pyc
+.env
+.vscode/
