@@ -1,4 +1,10 @@
 transformers
+accelerate
+huggingface-hub
+langchain
+langchain-community
+langchain-core
+python-dotenv
 torch
 sentence-transformers
 faiss-cpu

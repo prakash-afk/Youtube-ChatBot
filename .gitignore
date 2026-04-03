@@ -1,9 +1,13 @@
 ytChatBot/
+.hf_models/
 .venv/
 venv/
 env/
 ENV/
+data/faiss_index/*
+!data/faiss_index/.gitkeep
 __pycache__/
 *.pyc
 .env
 .vscode/
+#  Get-ChildItem .hf_models (check the downloaded models) and add them to .gitignore
