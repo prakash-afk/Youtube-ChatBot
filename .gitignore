@@ -1,5 +1,8 @@
 ytChatBot/
+.venv/
 venv/
+env/
+ENV/
 __pycache__/
 *.pyc
 .env
