@@ -4,6 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 from youtube_transcript_api import TranscriptsDisabled
+from youtube_transcript_api._errors import VideoUnavailable
 
 from app.chunking import build_documents, transcript_preview
 from app.config import get_settings
@@ -77,6 +78,8 @@ def main() -> None:
                     st.success("Transcript indexed successfully.")
                 except TranscriptsDisabled:
                     st.error("Transcripts are disabled for this video.")
+                except VideoUnavailable:
+                    st.error("This video is unavailable or its transcript cannot be retrieved.")
                 except Exception as exc:
                     st.error(f"Could not build the transcript index: {exc}")
 
