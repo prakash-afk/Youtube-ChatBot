@@ -34,4 +34,13 @@ def fetch_transcript(video_id: str, languages: List[str] | None = None) -> List[
     transcript = YouTubeTranscriptApi(http_client=session).fetch(
         video_id, languages=preferred_languages
     )
-    return [dict(item) for item in transcript]
+    normalized_transcript: List[dict] = []
+    for item in transcript:
+        normalized_transcript.append(
+            {
+                "text": getattr(item, "text", ""),
+                "start": float(getattr(item, "start", 0.0)),
+                "duration": float(getattr(item, "duration", 0.0)),
+            }
+        )
+    return normalized_transcript
